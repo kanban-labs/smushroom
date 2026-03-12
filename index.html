@@ -323,10 +323,9 @@
       let lastSpawn = 0
       const DEBOUNCE_MS = 120 // minimum ms between new blobs
 
-      function spawnBlob(x, y) {
-        ensureAudio() // unlock audio on very first user gesture
+      function spawnBlobSilent(x, y) {
         const now = performance.now()
-        if (now - lastSpawn < DEBOUNCE_MS) return
+        if (now - lastSpawn < DEBOUNCE_MS) return false
         lastSpawn = now
 
         if (hintVisible) {
@@ -346,7 +345,11 @@
           b.y = y
         }
         blobs.push(b)
-        playChime()
+        return true
+      }
+
+      function spawnBlob(x, y) {
+        if (spawnBlobSilent(x, y)) playChime()
       }
 
       // fullscreen toggle
@@ -368,19 +371,34 @@
         spawnBlob()
       })
 
-      // also support touch for tablets
+      // Unlock audio on first touchend/click — iOS only treats these as user activation
+      function unlockAudio() {
+        ensureAudio()
+        document.removeEventListener('touchend', unlockAudio)
+        document.removeEventListener('click', unlockAudio)
+      }
+      document.addEventListener('touchend', unlockAudio)
+      document.addEventListener('click', unlockAudio)
+
+      // touch for tablets — use touchstart for instant visual, touchend for audio
+      let pendingChime = false
       document.addEventListener(
         'touchstart',
         (e) => {
           // let taps on control buttons through
           if (fsBtn.contains(e.target) || muteBtn.contains(e.target)) return
           e.preventDefault()
-          // only use first touch to respect debounce
           const t = e.changedTouches[0]
-          spawnBlob(t.clientX, t.clientY)
+          pendingChime = spawnBlobSilent(t.clientX, t.clientY)
         },
         { passive: false },
       )
+      document.addEventListener('touchend', () => {
+        if (pendingChime) {
+          pendingChime = false
+          playChime()
+        }
+      })
 
       function loop() {
         ctx.clearRect(0, 0, W, H)
