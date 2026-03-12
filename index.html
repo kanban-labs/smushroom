@@ -197,7 +197,10 @@
           grad.addColorStop(0, this.c1 + 'ff')
           grad.addColorStop(1, this.c2 + '00')
           ctx.fillStyle = grad
-          ctx.filter = `blur(${Math.round(this.r * 0.18)}px)`
+          ctx.shadowColor = this.c1
+          ctx.shadowBlur = this.r * 0.4
+          ctx.shadowOffsetX = 0
+          ctx.shadowOffsetY = 0
           ctx.fill()
 
           ctx.restore()
