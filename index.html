@@ -30,11 +30,30 @@
       transition: opacity 2s;
     }
     #hint.hidden { opacity: 0; }
+    #fs-btn {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      padding: 6px;
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.15);
+      cursor: pointer;
+      transition: opacity 0.3s;
+      z-index: 10;
+    }
+    #fs-btn:hover { color: rgba(255,255,255,0.4); }
+    #fs-btn.hidden { opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body>
   <canvas id="c"></canvas>
   <div id="hint">press any key</div>
+  <button id="fs-btn" aria-label="Toggle fullscreen">
+    <img src="maximize.svg" alt="" width="24" height="24" style="filter: brightness(0) invert(1); opacity: inherit;">
+  </button>
 
   <script>
     const canvas = document.getElementById('c');
@@ -73,7 +92,7 @@
         this.x = W * (0.2 + Math.random() * 0.6);
         this.y = H * (0.2 + Math.random() * 0.6);
 
-        this.r = Math.min(W, H) * (0.15 + Math.random() * 0.25);
+        this.r = Math.min(W, H) * (0.08 + Math.random() * 0.15);
         this.c1 = c1;
         this.c2 = c2;
 
@@ -200,6 +219,20 @@
       blobs.push(b);
     }
 
+    // fullscreen toggle
+    const fsBtn = document.getElementById('fs-btn');
+    fsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    });
+    document.addEventListener('fullscreenchange', () => {
+      fsBtn.classList.toggle('hidden', !!document.fullscreenElement);
+    });
+
     document.addEventListener('keydown', (e) => {
       e.preventDefault();
       spawnBlob();
@@ -214,8 +247,8 @@
     }, { passive: false });
 
     function loop() {
-      // subtle dark trail for ghost smear effect
-      ctx.fillStyle = 'rgba(10,10,18,0.04)';
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#0a0a12';
       ctx.fillRect(0, 0, W, H);
 
       for (let i = blobs.length - 1; i >= 0; i--) {
