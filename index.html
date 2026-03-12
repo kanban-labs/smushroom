@@ -369,6 +369,11 @@
         spawnBlob()
       })
 
+      document.addEventListener('click', (e) => {
+        if (fsBtn.contains(e.target) || muteBtn.contains(e.target)) return
+        spawnBlob(e.clientX, e.clientY)
+      })
+
       // also support touch for tablets
       document.addEventListener(
         'touchstart',
