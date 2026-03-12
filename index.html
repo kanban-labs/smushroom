@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blob Garden</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #0a0a12;
+      overflow: hidden;
+      cursor: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    #hint {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.15);
+      font-family: 'Georgia', serif;
+      font-size: 13px;
+      letter-spacing: 0.15em;
+      pointer-events: none;
+      transition: opacity 2s;
+    }
+    #hint.hidden { opacity: 0; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="hint">press any key</div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    const hint = document.getElementById('hint');
+
+    let W, H;
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Palette sets — each keypress picks a random harmony
+    const palettes = [
+      ['#ff9de2','#ffb347','#ffe066'],   // warm peach-pink-gold
+      ['#a0e4ff','#b8f0c8','#e0d4ff'],   // cool mint-sky-lavender
+      ['#ff6eb0','#ff9a3c','#ffde59'],   // vivid sunset
+      ['#7de8e8','#a8b4ff','#f9a8d4'],   // pastel sea
+      ['#fff07c','#90f5b0','#87d4ff'],   // lemon-lime-sky
+      ['#ff8fab','#ffb347','#c5f2c7'],   // rose-amber-sage
+      ['#d4a5ff','#a5d4ff','#ffd4a5'],   // soft triadic
+      ['#ffe5ec','#ffc8a2','#d4f1f4'],   // milky pastels
+    ];
+
+    const blobs = [];
+
+    class Blob {
+      constructor() {
+        const palette = palettes[Math.floor(Math.random() * palettes.length)];
+        const c1 = palette[Math.floor(Math.random() * palette.length)];
+        const c2 = palette[Math.floor(Math.random() * palette.length)];
+
+        // spawn slightly off-centre for variety
+        this.x = W * (0.2 + Math.random() * 0.6);
+        this.y = H * (0.2 + Math.random() * 0.6);
+
+        this.r = Math.min(W, H) * (0.15 + Math.random() * 0.25);
+        this.c1 = c1;
+        this.c2 = c2;
+
+        // gentle drift
+        this.vx = (Math.random() - 0.5) * 0.35;
+        this.vy = (Math.random() - 0.5) * 0.35;
+
+        // blob shape: 6-8 control point radii offsets
+        this.pts = 7;
+        this.offsets = Array.from({length: this.pts}, () => 0.7 + Math.random() * 0.6);
+        this.offsetSpeeds = Array.from({length: this.pts}, () => (Math.random() - 0.5) * 0.008);
+        this.phase = Math.random() * Math.PI * 2;
+        this.phaseSpeed = 0.004 + Math.random() * 0.006;
+
+        // lifecycle
+        this.alpha = 0;
+        this.fadeIn = true;
+        this.maxAlpha = 0.55 + Math.random() * 0.3;
+        this.fadeSpeed = 0.004 + Math.random() * 0.004;
+        this.dead = false;
+      }
+
+      update() {
+        // wiggle shape
+        this.phase += this.phaseSpeed;
+        this.offsets = this.offsets.map((o, i) => {
+          let n = o + this.offsetSpeeds[i];
+          if (n > 1.3 || n < 0.5) this.offsetSpeeds[i] *= -1;
+          return n;
+        });
+
+        // drift
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // soft bounce
+        if (this.x < -this.r) this.x = W + this.r;
+        if (this.x > W + this.r) this.x = -this.r;
+        if (this.y < -this.r) this.y = H + this.r;
+        if (this.y > H + this.r) this.y = -this.r;
+
+        // fade
+        if (this.fadeIn) {
+          this.alpha += this.fadeSpeed;
+          if (this.alpha >= this.maxAlpha) {
+            this.alpha = this.maxAlpha;
+            this.fadeIn = false;
+          }
+        } else {
+          this.alpha -= this.fadeSpeed * 0.5;
+          if (this.alpha <= 0) this.dead = true;
+        }
+      }
+
+      startFadeOut() {
+        this.fadeIn = false;
+        this.fadeSpeed = 0.003 + Math.random() * 0.003;
+      }
+
+      draw() {
+        const pts = this.pts;
+        const step = (Math.PI * 2) / pts;
+
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.alpha);
+
+        // build smooth blob path with bezier curves
+        const angles = [];
+        const radii = [];
+        for (let i = 0; i < pts; i++) {
+          angles.push(step * i + this.phase);
+          radii.push(this.r * this.offsets[i]);
+        }
+        const px = angles.map((a, i) => this.x + Math.cos(a) * radii[i]);
+        const py = angles.map((a, i) => this.y + Math.sin(a) * radii[i]);
+
+        ctx.beginPath();
+        ctx.moveTo((px[pts - 1] + px[0]) / 2, (py[pts - 1] + py[0]) / 2);
+        for (let i = 0; i < pts; i++) {
+          const next = (i + 1) % pts;
+          const mx = (px[i] + px[next]) / 2;
+          const my = (py[i] + py[next]) / 2;
+          ctx.quadraticCurveTo(px[i], py[i], mx, my);
+        }
+        ctx.closePath();
+
+        // radial gradient fill
+        const grad = ctx.createRadialGradient(
+          this.x - this.r * 0.2, this.y - this.r * 0.2, this.r * 0.05,
+          this.x, this.y, this.r * 1.2
+        );
+        grad.addColorStop(0, this.c1 + 'ff');
+        grad.addColorStop(1, this.c2 + '00');
+        ctx.fillStyle = grad;
+        ctx.filter = `blur(${Math.round(this.r * 0.18)}px)`;
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    let hintVisible = true;
+    let lastSpawn = 0;
+    const DEBOUNCE_MS = 120; // minimum ms between new blobs
+
+    function spawnBlob(x, y) {
+      const now = performance.now();
+      if (now - lastSpawn < DEBOUNCE_MS) return;
+      lastSpawn = now;
+
+      if (hintVisible) {
+        hint.classList.add('hidden');
+        hintVisible = false;
+      }
+
+      // fade out oldest blob if getting crowded
+      const live = blobs.filter(b => !b.dead && !b.fadeIn);
+      if (live.length > 6) {
+        live[0].startFadeOut();
+      }
+
+      const b = new Blob();
+      if (x !== undefined) { b.x = x; b.y = y; }
+      blobs.push(b);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      e.preventDefault();
+      spawnBlob();
+    });
+
+    // also support touch for tablets
+    document.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      // only use first touch to respect debounce
+      const t = e.changedTouches[0];
+      spawnBlob(t.clientX, t.clientY);
+    }, { passive: false });
+
+    function loop() {
+      // subtle dark trail for ghost smear effect
+      ctx.fillStyle = 'rgba(10,10,18,0.04)';
+      ctx.fillRect(0, 0, W, H);
+
+      for (let i = blobs.length - 1; i >= 0; i--) {
+        blobs[i].update();
+        blobs[i].draw();
+        if (blobs[i].dead) blobs.splice(i, 1);
+      }
+
+      requestAnimationFrame(loop);
+    }
+    loop();
+  </script>
+</body>
+</html>
