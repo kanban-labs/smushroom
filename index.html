@@ -73,6 +73,14 @@
       const ctx = canvas.getContext('2d')
       const hint = document.getElementById('hint')
 
+      // detect ctx.filter blur support (missing on iOS Safari)
+      const supportsFilterBlur = (() => {
+        const c = document.createElement('canvas')
+        const t = c.getContext('2d')
+        t.filter = 'blur(1px)'
+        return t.filter === 'blur(1px)'
+      })()
+
       let W, H
       function resize() {
         W = canvas.width = window.innerWidth
@@ -197,10 +205,15 @@
           grad.addColorStop(0, this.c1 + 'ff')
           grad.addColorStop(1, this.c2 + '00')
           ctx.fillStyle = grad
-          ctx.shadowColor = this.c1
-          ctx.shadowBlur = this.r * 0.4
-          ctx.shadowOffsetX = 0
-          ctx.shadowOffsetY = 0
+          const blurAmt = Math.round(this.r * 0.18)
+          if (supportsFilterBlur) {
+            ctx.filter = `blur(${blurAmt}px)`
+          } else {
+            ctx.shadowColor = this.c1
+            ctx.shadowBlur = this.r * 0.4
+            ctx.shadowOffsetX = 0
+            ctx.shadowOffsetY = 0
+          }
           ctx.fill()
 
           ctx.restore()
@@ -258,6 +271,8 @@
       document.addEventListener(
         'touchstart',
         (e) => {
+          // let taps on the fullscreen button through
+          if (fsBtn.contains(e.target)) return
           e.preventDefault()
           // only use first touch to respect debounce
           const t = e.changedTouches[0]
