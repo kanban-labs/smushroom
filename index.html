@@ -3,7 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Smushroom 🍄</title>
+    <title>Smushroom</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍄</text></svg>"
+    />
     <style>
       * {
         margin: 0;
@@ -80,6 +84,10 @@
         t.filter = 'blur(1px)'
         return t.filter === 'blur(1px)'
       })()
+
+      // offscreen canvas for downscale-blur fallback
+      const offCanvas = document.createElement('canvas')
+      const offCtx = offCanvas.getContext('2d')
 
       let W, H
       function resize() {
@@ -173,14 +181,9 @@
           this.fadeSpeed = 0.003 + Math.random() * 0.003
         }
 
-        draw() {
+        drawPath(target) {
           const pts = this.pts
           const step = (Math.PI * 2) / pts
-
-          ctx.save()
-          ctx.globalAlpha = Math.max(0, this.alpha)
-
-          // build smooth blob path with bezier curves
           const angles = []
           const radii = []
           for (let i = 0; i < pts; i++) {
@@ -190,33 +193,71 @@
           const px = angles.map((a, i) => this.x + Math.cos(a) * radii[i])
           const py = angles.map((a, i) => this.y + Math.sin(a) * radii[i])
 
-          ctx.beginPath()
-          ctx.moveTo((px[pts - 1] + px[0]) / 2, (py[pts - 1] + py[0]) / 2)
+          target.beginPath()
+          target.moveTo((px[pts - 1] + px[0]) / 2, (py[pts - 1] + py[0]) / 2)
           for (let i = 0; i < pts; i++) {
             const next = (i + 1) % pts
             const mx = (px[i] + px[next]) / 2
             const my = (py[i] + py[next]) / 2
-            ctx.quadraticCurveTo(px[i], py[i], mx, my)
+            target.quadraticCurveTo(px[i], py[i], mx, my)
           }
-          ctx.closePath()
+          target.closePath()
+        }
 
-          // radial gradient fill
-          const grad = ctx.createRadialGradient(this.x - this.r * 0.2, this.y - this.r * 0.2, this.r * 0.05, this.x, this.y, this.r * 1.2)
-          grad.addColorStop(0, this.c1 + 'ff')
-          grad.addColorStop(1, this.c2 + '00')
-          ctx.fillStyle = grad
+        draw() {
           const blurAmt = Math.round(this.r * 0.18)
-          if (supportsFilterBlur) {
-            ctx.filter = `blur(${blurAmt}px)`
-          } else {
-            ctx.shadowColor = this.c1
-            ctx.shadowBlur = this.r * 0.4
-            ctx.shadowOffsetX = 0
-            ctx.shadowOffsetY = 0
-          }
-          ctx.fill()
 
-          ctx.restore()
+          if (supportsFilterBlur) {
+            ctx.save()
+            ctx.globalAlpha = Math.max(0, this.alpha)
+            this.drawPath(ctx)
+            const grad = ctx.createRadialGradient(this.x - this.r * 0.2, this.y - this.r * 0.2, this.r * 0.05, this.x, this.y, this.r * 1.2)
+            grad.addColorStop(0, this.c1 + 'ff')
+            grad.addColorStop(1, this.c2 + '00')
+            ctx.fillStyle = grad
+            ctx.filter = `blur(${blurAmt}px)`
+            ctx.fill()
+            ctx.restore()
+          } else {
+            // fallback: draw at reduced resolution, scale up for natural blur
+            const scale = 0.25
+            const pad = blurAmt * 3
+            const bx = this.x - this.r * 1.4 - pad
+            const by = this.y - this.r * 1.4 - pad
+            const bw = this.r * 2.8 + pad * 2
+            const bh = this.r * 2.8 + pad * 2
+            const sw = Math.ceil(bw * scale)
+            const sh = Math.ceil(bh * scale)
+
+            offCanvas.width = sw
+            offCanvas.height = sh
+            offCtx.clearRect(0, 0, sw, sh)
+            offCtx.save()
+            offCtx.scale(scale, scale)
+            offCtx.translate(-bx, -by)
+
+            this.drawPath(offCtx)
+            const grad = offCtx.createRadialGradient(
+              this.x - this.r * 0.2,
+              this.y - this.r * 0.2,
+              this.r * 0.05,
+              this.x,
+              this.y,
+              this.r * 1.2,
+            )
+            grad.addColorStop(0, this.c1 + 'ff')
+            grad.addColorStop(1, this.c2 + '00')
+            offCtx.fillStyle = grad
+            offCtx.fill()
+            offCtx.restore()
+
+            ctx.save()
+            ctx.globalAlpha = Math.max(0, this.alpha)
+            ctx.imageSmoothingEnabled = true
+            ctx.imageSmoothingQuality = 'high'
+            ctx.drawImage(offCanvas, 0, 0, sw, sh, bx, by, bw, bh)
+            ctx.restore()
+          }
         }
       }
 
