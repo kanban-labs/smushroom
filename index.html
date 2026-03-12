@@ -35,7 +35,7 @@
         position: fixed;
         left: 0;
         right: 0;
-        bottom: 28px;
+        bottom: 15vh;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -60,16 +60,20 @@
         padding: 6px;
         background: none;
         border: none;
-        color: rgba(255, 255, 255, 0.15);
+        color: rgba(255, 255, 255, 0.75);
         cursor: pointer;
         transition: opacity 0.3s;
         z-index: 10;
       }
-      #fs-btn { right: 16px; }
-      #mute-btn { right: 56px; }
+      #fs-btn {
+        right: 16px;
+      }
+      #mute-btn {
+        right: 56px;
+      }
       #fs-btn:hover,
       #mute-btn:hover {
-        color: rgba(255, 255, 255, 0.4);
+        color: rgba(255, 255, 255, 1);
       }
       #fs-btn.hidden {
         opacity: 0;
@@ -80,9 +84,22 @@
   <body>
     <canvas id="c"></canvas>
     <canvas id="blobs"></canvas>
-    <div id="hint">press any key or tap anywhere</div>
+    <div id="hint">
+      press any key<br />
+      or tap anywhere
+    </div>
     <button id="mute-btn" aria-label="Toggle sound">
-      <svg id="mute-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg
+        id="mute-icon"
+        viewBox="0 0 24 24"
+        width="24"
+        height="24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
         <path class="sound-on" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
         <path class="sound-on" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
@@ -233,20 +250,32 @@
       let audioCtx = null
       let muted = false
       const chimePresets = [
-        { type: 'sine',     freq: 520, decay: 0.4 },  // soft bell
-        { type: 'sine',     freq: 280, decay: 0.2 },  // low plop
-        { type: 'triangle', freq: 680, decay: 0.3 },  // bright ding
-        { type: 'sine',     freq: 440, decay: 0.5, detune: 12 }, // airy chime
+        { type: 'sine', freq: 520, decay: 0.4 }, // soft bell
+        { type: 'sine', freq: 280, decay: 0.2 }, // low plop
+        { type: 'triangle', freq: 680, decay: 0.3 }, // bright ding
+        { type: 'sine', freq: 440, decay: 0.5, detune: 12 }, // airy chime
       ]
+
+      let audioUnlocked = false
 
       function ensureAudio() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
         if (audioCtx.state === 'suspended') audioCtx.resume()
+        // iOS requires playing a sound within the user gesture to unlock audio
+        if (!audioUnlocked) {
+          const buf = audioCtx.createBuffer(1, 1, audioCtx.sampleRate)
+          const src = audioCtx.createBufferSource()
+          src.buffer = buf
+          src.connect(audioCtx.destination)
+          src.start()
+          audioUnlocked = true
+        }
       }
 
       function playChime() {
         if (muted) return
         ensureAudio()
+        if (audioCtx.state !== 'running') return // still locked, skip this one
         const preset = chimePresets[Math.floor(Math.random() * chimePresets.length)]
         const osc = audioCtx.createOscillator()
         const gain = audioCtx.createGain()
@@ -273,12 +302,16 @@
           if (!muteIcon.querySelector('.sound-off')) {
             const l1 = document.createElementNS('http://www.w3.org/2000/svg', 'line')
             l1.setAttribute('class', 'sound-off')
-            l1.setAttribute('x1', '18'); l1.setAttribute('y1', '9')
-            l1.setAttribute('x2', '22'); l1.setAttribute('y2', '15')
+            l1.setAttribute('x1', '18')
+            l1.setAttribute('y1', '9')
+            l1.setAttribute('x2', '22')
+            l1.setAttribute('y2', '15')
             const l2 = document.createElementNS('http://www.w3.org/2000/svg', 'line')
             l2.setAttribute('class', 'sound-off')
-            l2.setAttribute('x1', '22'); l2.setAttribute('y1', '9')
-            l2.setAttribute('x2', '18'); l2.setAttribute('y2', '15')
+            l2.setAttribute('x1', '22')
+            l2.setAttribute('y1', '9')
+            l2.setAttribute('x2', '18')
+            l2.setAttribute('y2', '15')
             muteIcon.appendChild(l1)
             muteIcon.appendChild(l2)
           }
@@ -292,6 +325,7 @@
       const DEBOUNCE_MS = 120 // minimum ms between new blobs
 
       function spawnBlob(x, y) {
+        ensureAudio() // unlock audio on very first user gesture
         const now = performance.now()
         if (now - lastSpawn < DEBOUNCE_MS) return
         lastSpawn = now
