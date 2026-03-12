@@ -256,20 +256,9 @@
         { type: 'sine', freq: 440, decay: 0.5, detune: 12 }, // airy chime
       ]
 
-      let audioUnlocked = false
-
       function ensureAudio() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
         if (audioCtx.state === 'suspended') audioCtx.resume()
-        // iOS requires playing a sound within the user gesture to unlock audio
-        if (!audioUnlocked) {
-          const buf = audioCtx.createBuffer(1, 1, audioCtx.sampleRate)
-          const src = audioCtx.createBufferSource()
-          src.buffer = buf
-          src.connect(audioCtx.destination)
-          src.start()
-          audioUnlocked = true
-        }
       }
 
       function playChime() {
@@ -323,9 +312,9 @@
       let lastSpawn = 0
       const DEBOUNCE_MS = 120 // minimum ms between new blobs
 
-      function spawnBlobSilent(x, y) {
+      function spawnBlob(x, y) {
         const now = performance.now()
-        if (now - lastSpawn < DEBOUNCE_MS) return false
+        if (now - lastSpawn < DEBOUNCE_MS) return
         lastSpawn = now
 
         if (hintVisible) {
@@ -345,11 +334,7 @@
           b.y = y
         }
         blobs.push(b)
-        return true
-      }
-
-      function spawnBlob(x, y) {
-        if (spawnBlobSilent(x, y)) playChime()
+        playChime()
       }
 
       // fullscreen toggle
@@ -371,17 +356,7 @@
         spawnBlob()
       })
 
-      // Unlock audio on first touchend/click — iOS only treats these as user activation
-      function unlockAudio() {
-        ensureAudio()
-        document.removeEventListener('touchend', unlockAudio)
-        document.removeEventListener('click', unlockAudio)
-      }
-      document.addEventListener('touchend', unlockAudio)
-      document.addEventListener('click', unlockAudio)
-
-      // touch for tablets — use touchstart for instant visual, touchend for audio
-      let pendingChime = false
+      // also support touch for tablets
       document.addEventListener(
         'touchstart',
         (e) => {
@@ -389,16 +364,10 @@
           if (fsBtn.contains(e.target) || muteBtn.contains(e.target)) return
           e.preventDefault()
           const t = e.changedTouches[0]
-          pendingChime = spawnBlobSilent(t.clientX, t.clientY)
+          spawnBlob(t.clientX, t.clientY)
         },
         { passive: false },
       )
-      document.addEventListener('touchend', () => {
-        if (pendingChime) {
-          pendingChime = false
-          playChime()
-        }
-      })
 
       function loop() {
         ctx.clearRect(0, 0, W, H)
