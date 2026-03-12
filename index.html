@@ -23,6 +23,9 @@
         cursor: none;
       }
       canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
         display: block;
         width: 100%;
         height: 100%;
@@ -67,6 +70,7 @@
   </head>
   <body>
     <canvas id="c"></canvas>
+    <canvas id="blobs"></canvas>
     <div id="hint">press any key</div>
     <button id="fs-btn" aria-label="Toggle fullscreen">
       <img src="maximize.svg" alt="" width="24" height="24" style="filter: brightness(0) invert(1); opacity: inherit" />
@@ -75,24 +79,19 @@
     <script>
       const canvas = document.getElementById('c')
       const ctx = canvas.getContext('2d')
+      const blobCanvas = document.getElementById('blobs')
+      const bCtx = blobCanvas.getContext('2d')
       const hint = document.getElementById('hint')
 
-      // detect ctx.filter blur support (missing on iOS Safari)
-      const supportsFilterBlur = (() => {
-        const c = document.createElement('canvas')
-        const t = c.getContext('2d')
-        t.filter = 'blur(1px)'
-        return t.filter === 'blur(1px)'
-      })()
-
-      // offscreen canvas for downscale-blur fallback
-      const offCanvas = document.createElement('canvas')
-      const offCtx = offCanvas.getContext('2d')
+      // CSS blur on the blob canvas — works on iOS Safari unlike ctx.filter
+      // const BLUR_PX = Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.012)
+      const BLUR_PX = 26
+      blobCanvas.style.filter = `blur(${BLUR_PX}px)`
 
       let W, H
       function resize() {
-        W = canvas.width = window.innerWidth
-        H = canvas.height = window.innerHeight
+        W = canvas.width = blobCanvas.width = window.innerWidth
+        H = canvas.height = blobCanvas.height = window.innerHeight
       }
       resize()
       window.addEventListener('resize', resize)
@@ -181,7 +180,7 @@
           this.fadeSpeed = 0.003 + Math.random() * 0.003
         }
 
-        drawPath(target) {
+        draw() {
           const pts = this.pts
           const step = (Math.PI * 2) / pts
           const angles = []
@@ -193,71 +192,24 @@
           const px = angles.map((a, i) => this.x + Math.cos(a) * radii[i])
           const py = angles.map((a, i) => this.y + Math.sin(a) * radii[i])
 
-          target.beginPath()
-          target.moveTo((px[pts - 1] + px[0]) / 2, (py[pts - 1] + py[0]) / 2)
+          bCtx.save()
+          bCtx.globalAlpha = Math.max(0, this.alpha)
+          bCtx.beginPath()
+          bCtx.moveTo((px[pts - 1] + px[0]) / 2, (py[pts - 1] + py[0]) / 2)
           for (let i = 0; i < pts; i++) {
             const next = (i + 1) % pts
             const mx = (px[i] + px[next]) / 2
             const my = (py[i] + py[next]) / 2
-            target.quadraticCurveTo(px[i], py[i], mx, my)
+            bCtx.quadraticCurveTo(px[i], py[i], mx, my)
           }
-          target.closePath()
-        }
+          bCtx.closePath()
 
-        draw() {
-          const blurAmt = Math.round(this.r * 0.18)
-
-          if (supportsFilterBlur) {
-            ctx.save()
-            ctx.globalAlpha = Math.max(0, this.alpha)
-            this.drawPath(ctx)
-            const grad = ctx.createRadialGradient(this.x - this.r * 0.2, this.y - this.r * 0.2, this.r * 0.05, this.x, this.y, this.r * 1.2)
-            grad.addColorStop(0, this.c1 + 'ff')
-            grad.addColorStop(1, this.c2 + '00')
-            ctx.fillStyle = grad
-            ctx.filter = `blur(${blurAmt}px)`
-            ctx.fill()
-            ctx.restore()
-          } else {
-            // fallback: draw at reduced resolution, scale up for natural blur
-            const scale = 0.25
-            const pad = blurAmt * 3
-            const bx = this.x - this.r * 1.4 - pad
-            const by = this.y - this.r * 1.4 - pad
-            const bw = this.r * 2.8 + pad * 2
-            const bh = this.r * 2.8 + pad * 2
-            const sw = Math.ceil(bw * scale)
-            const sh = Math.ceil(bh * scale)
-
-            offCanvas.width = sw
-            offCanvas.height = sh
-            offCtx.clearRect(0, 0, sw, sh)
-            offCtx.save()
-            offCtx.scale(scale, scale)
-            offCtx.translate(-bx, -by)
-
-            this.drawPath(offCtx)
-            const grad = offCtx.createRadialGradient(
-              this.x - this.r * 0.2,
-              this.y - this.r * 0.2,
-              this.r * 0.05,
-              this.x,
-              this.y,
-              this.r * 1.2,
-            )
-            grad.addColorStop(0, this.c1 + 'ff')
-            grad.addColorStop(1, this.c2 + '00')
-            offCtx.fillStyle = grad
-            offCtx.fill()
-            offCtx.restore()
-
-            ctx.save()
-            ctx.globalAlpha = Math.max(0, this.alpha)
-            ctx.imageSmoothingEnabled = true
-            ctx.imageSmoothingQuality = 'high'
-            ctx.drawImage(offCanvas, 0, 0, sw, sh, bx, by, bw, bh)
-            ctx.restore()
-          }
+          const grad = bCtx.createRadialGradient(this.x - this.r * 0.2, this.y - this.r * 0.2, this.r * 0.05, this.x, this.y, this.r * 1.2)
+          grad.addColorStop(0, this.c1 + 'ff')
+          grad.addColorStop(1, this.c2 + '00')
+          bCtx.fillStyle = grad
+          bCtx.fill()
+          bCtx.restore()
         }
       }
 
@@ -326,6 +278,7 @@
         ctx.clearRect(0, 0, W, H)
         ctx.fillStyle = '#0a0a12'
         ctx.fillRect(0, 0, W, H)
+        bCtx.clearRect(0, 0, W, H)
 
         for (let i = blobs.length - 1; i >= 0; i--) {
           blobs[i].update()
