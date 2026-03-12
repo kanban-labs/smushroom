@@ -275,7 +275,6 @@
       function playChime() {
         if (muted) return
         ensureAudio()
-        if (audioCtx.state !== 'running') return // still locked, skip this one
         const preset = chimePresets[Math.floor(Math.random() * chimePresets.length)]
         const osc = audioCtx.createOscillator()
         const gain = audioCtx.createGain()
