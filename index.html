@@ -337,19 +337,23 @@
         playChime()
       }
 
-      // fullscreen toggle
+      // fullscreen toggle — hide on platforms without support (iOS Safari)
       const fsBtn = document.getElementById('fs-btn')
-      fsBtn.addEventListener('click', (e) => {
-        e.stopPropagation()
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen()
-        } else {
-          document.exitFullscreen()
-        }
-      })
-      document.addEventListener('fullscreenchange', () => {
-        fsBtn.classList.toggle('hidden', !!document.fullscreenElement)
-      })
+      if (!document.fullscreenEnabled) {
+        fsBtn.style.display = 'none'
+      } else {
+        fsBtn.addEventListener('click', (e) => {
+          e.stopPropagation()
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen()
+          } else {
+            document.exitFullscreen()
+          }
+        })
+        document.addEventListener('fullscreenchange', () => {
+          fsBtn.classList.toggle('hidden', !!document.fullscreenElement)
+        })
+      }
 
       document.addEventListener('keydown', (e) => {
         e.preventDefault()
