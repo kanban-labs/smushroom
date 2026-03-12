@@ -51,10 +51,10 @@
       #hint.hidden {
         opacity: 0;
       }
-      #fs-btn {
+      #fs-btn,
+      #mute-btn {
         position: fixed;
         bottom: 16px;
-        right: 16px;
         width: 36px;
         height: 36px;
         padding: 6px;
@@ -65,7 +65,10 @@
         transition: opacity 0.3s;
         z-index: 10;
       }
-      #fs-btn:hover {
+      #fs-btn { right: 16px; }
+      #mute-btn { right: 56px; }
+      #fs-btn:hover,
+      #mute-btn:hover {
         color: rgba(255, 255, 255, 0.4);
       }
       #fs-btn.hidden {
@@ -78,6 +81,13 @@
     <canvas id="c"></canvas>
     <canvas id="blobs"></canvas>
     <div id="hint">press any key or tap anywhere</div>
+    <button id="mute-btn" aria-label="Toggle sound">
+      <svg id="mute-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <path class="sound-on" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+        <path class="sound-on" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+      </svg>
+    </button>
     <button id="fs-btn" aria-label="Toggle fullscreen">
       <img src="maximize.svg" alt="" width="24" height="24" style="filter: brightness(0) invert(1); opacity: inherit" />
     </button>
@@ -219,6 +229,64 @@
         }
       }
 
+      // ── Audio system ──
+      let audioCtx = null
+      let muted = false
+      const chimePresets = [
+        { type: 'sine',     freq: 520, decay: 0.4 },  // soft bell
+        { type: 'sine',     freq: 280, decay: 0.2 },  // low plop
+        { type: 'triangle', freq: 680, decay: 0.3 },  // bright ding
+        { type: 'sine',     freq: 440, decay: 0.5, detune: 12 }, // airy chime
+      ]
+
+      function ensureAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+        if (audioCtx.state === 'suspended') audioCtx.resume()
+      }
+
+      function playChime() {
+        if (muted) return
+        ensureAudio()
+        const preset = chimePresets[Math.floor(Math.random() * chimePresets.length)]
+        const osc = audioCtx.createOscillator()
+        const gain = audioCtx.createGain()
+        osc.type = preset.type
+        osc.frequency.value = preset.freq + (Math.random() - 0.5) * 60
+        if (preset.detune) osc.detune.value = preset.detune
+        gain.gain.setValueAtTime(0.18, audioCtx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + preset.decay)
+        osc.connect(gain)
+        gain.connect(audioCtx.destination)
+        osc.start()
+        osc.stop(audioCtx.currentTime + preset.decay)
+      }
+
+      // ── Mute toggle ──
+      const muteBtn = document.getElementById('mute-btn')
+      const muteIcon = document.getElementById('mute-icon')
+      muteBtn.addEventListener('click', (e) => {
+        e.stopPropagation()
+        muted = !muted
+        muteIcon.querySelectorAll('.sound-on').forEach((p) => (p.style.display = muted ? 'none' : ''))
+        if (muted) {
+          // add an X over the speaker when muted
+          if (!muteIcon.querySelector('.sound-off')) {
+            const l1 = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+            l1.setAttribute('class', 'sound-off')
+            l1.setAttribute('x1', '18'); l1.setAttribute('y1', '9')
+            l1.setAttribute('x2', '22'); l1.setAttribute('y2', '15')
+            const l2 = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+            l2.setAttribute('class', 'sound-off')
+            l2.setAttribute('x1', '22'); l2.setAttribute('y1', '9')
+            l2.setAttribute('x2', '18'); l2.setAttribute('y2', '15')
+            muteIcon.appendChild(l1)
+            muteIcon.appendChild(l2)
+          }
+        } else {
+          muteIcon.querySelectorAll('.sound-off').forEach((el) => el.remove())
+        }
+      })
+
       let hintVisible = true
       let lastSpawn = 0
       const DEBOUNCE_MS = 120 // minimum ms between new blobs
@@ -245,6 +313,7 @@
           b.y = y
         }
         blobs.push(b)
+        playChime()
       }
 
       // fullscreen toggle
@@ -270,8 +339,8 @@
       document.addEventListener(
         'touchstart',
         (e) => {
-          // let taps on the fullscreen button through
-          if (fsBtn.contains(e.target)) return
+          // let taps on control buttons through
+          if (fsBtn.contains(e.target) || muteBtn.contains(e.target)) return
           e.preventDefault()
           // only use first touch to respect debounce
           const t = e.changedTouches[0]
