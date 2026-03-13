@@ -101,14 +101,16 @@
         transition: color 0.3s;
         z-index: 10;
       }
-      #settings-btn:hover { color: rgba(255,255,255,1); }
+      #settings-btn:hover {
+        color: rgba(255, 255, 255, 1);
+      }
       #settings-panel {
         position: fixed;
         bottom: 64px;
         right: 16px;
         width: 260px;
         background: rgba(15, 15, 28, 0.92);
-        border: 0.5px solid rgba(255,255,255,0.15);
+        border: 0.5px solid rgba(255, 255, 255, 0.15);
         border-radius: 12px;
         padding: 16px 18px;
         z-index: 20;
@@ -116,14 +118,16 @@
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
       }
-      #settings-panel.open { display: block; }
+      #settings-panel.open {
+        display: block;
+      }
       #settings-panel h3 {
         margin: 0 0 14px;
         font-size: 11px;
         font-weight: 500;
         letter-spacing: 0.1em;
         text-transform: uppercase;
-        color: rgba(255,255,255,0.45);
+        color: rgba(255, 255, 255, 0.45);
         font-family: monospace;
       }
       .sp-row {
@@ -132,22 +136,24 @@
         gap: 10px;
         margin-bottom: 12px;
       }
-      .sp-row:last-child { margin-bottom: 0; }
+      .sp-row:last-child {
+        margin-bottom: 0;
+      }
       .sp-label {
         font-size: 12px;
-        color: rgba(255,255,255,0.6);
+        color: rgba(255, 255, 255, 0.6);
         font-family: monospace;
         width: 72px;
         flex-shrink: 0;
       }
-      .sp-row input[type=range] {
+      .sp-row input[type='range'] {
         flex: 1;
-        accent-color: rgba(255,255,255,0.7);
+        accent-color: rgba(255, 255, 255, 0.7);
         cursor: pointer;
       }
       .sp-val {
         font-size: 12px;
-        color: rgba(255,255,255,0.85);
+        color: rgba(255, 255, 255, 0.85);
         font-family: monospace;
         width: 36px;
         text-align: right;
@@ -177,39 +183,10 @@
         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
         <path class="sound-on" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
         <path class="sound-on" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-        <line class="sound-off" x1="18" y1="9" x2="22" y2="15" style="display:none" />
-        <line class="sound-off" x1="22" y1="9" x2="18" y2="15" style="display:none" />
+        <line class="sound-off" x1="18" y1="9" x2="22" y2="15" style="display: none" />
+        <line class="sound-off" x1="22" y1="9" x2="18" y2="15" style="display: none" />
       </svg>
     </button>
-    <button id="settings-btn" aria-label="Sound settings">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-    </button>
-    <div id="settings-panel">
-      <h3>Sound</h3>
-      <div class="sp-row">
-        <span class="sp-label">register</span>
-        <input type="range" id="sp-octave" min="-2" max="1" step="1" value="0">
-        <span class="sp-val" id="sp-octave-val">mid</span>
-      </div>
-      <div class="sp-row">
-        <span class="sp-label">brightness</span>
-        <input type="range" id="sp-filter" min="800" max="8000" step="100" value="800">
-        <span class="sp-val" id="sp-filter-val">mid</span>
-      </div>
-      <div class="sp-row">
-        <span class="sp-label">decay</span>
-        <input type="range" id="sp-decay" min="0.2" max="2.0" step="0.1" value="2.0">
-        <span class="sp-val" id="sp-decay-val">1.0s</span>
-      </div>
-      <div class="sp-row">
-        <span class="sp-label">volume</span>
-        <input type="range" id="sp-vol" min="0.02" max="0.30" step="0.01" value="0.13">
-        <span class="sp-val" id="sp-vol-val">mid</span>
-      </div>
-    </div>
     <button id="fs-btn" aria-label="Toggle fullscreen">
       <img src="maximize.svg" alt="" width="24" height="24" style="filter: brightness(0) invert(1); opacity: inherit" />
     </button>
@@ -361,21 +338,21 @@
 
       // Live-adjustable sound parameters (written by the settings panel)
       const soundParams = {
-        octaveShift: 0,    // semitone multiplier offset: -2=low, -1=mid-low, 0=default, 1=higher
-        filterHz: 800,     // low-pass cutoff — warm default
-        decayMult: 2.0,    // multiplies each preset's decay
-        volume: 0.13,      // peak gain
+        octaveShift: 0, // semitone multiplier offset: -2=low, -1=mid-low, 0=default, 1=higher
+        filterHz: 800, // low-pass cutoff — warm default
+        decayMult: 2.0, // multiplies each preset's decay
+        volume: 0.6, // peak gain
       }
 
       // Base C major pentatonic at C5-E6
       const chimePresets = [
-        { freq: 523.25,  decay: 0.7  }, // C5
-        { freq: 587.33,  decay: 0.65 }, // D5
-        { freq: 659.25,  decay: 0.6  }, // E5
-        { freq: 783.99,  decay: 0.55 }, // G5
-        { freq: 880.00,  decay: 0.5  }, // A5
-        { freq: 1046.50, decay: 0.65 }, // C6
-        { freq: 1174.66, decay: 0.6  }, // D6
+        { freq: 523.25, decay: 0.7 }, // C5
+        { freq: 587.33, decay: 0.65 }, // D5
+        { freq: 659.25, decay: 0.6 }, // E5
+        { freq: 783.99, decay: 0.55 }, // G5
+        { freq: 880.0, decay: 0.5 }, // A5
+        { freq: 1046.5, decay: 0.65 }, // C6
+        { freq: 1174.66, decay: 0.6 }, // D6
         { freq: 1318.51, decay: 0.55 }, // E6
       ]
 
@@ -430,59 +407,6 @@
         osc.stop(t + decay)
         osc2.stop(t + decay)
       }
-
-      // ── Settings panel ──
-      const settingsBtn = document.getElementById('settings-btn')
-      const settingsPanel = document.getElementById('settings-panel')
-
-      settingsBtn.addEventListener('click', (e) => {
-        e.stopPropagation()
-        settingsPanel.classList.toggle('open')
-      })
-
-      const octaveLabels = ['very low', 'low', 'mid', 'high']
-      const filterLabels  = ['warm', 'mid', 'bright', 'crisp']
-
-      function pct(val, min, max) {
-        return (val - min) / (max - min)
-      }
-      function labelFromPct(p, labels) {
-        return labels[Math.min(labels.length - 1, Math.floor(p * labels.length))]
-      }
-
-      const spOctave = document.getElementById('sp-octave')
-      const spOctaveVal = document.getElementById('sp-octave-val')
-      spOctave.addEventListener('input', (e) => {
-        soundParams.octaveShift = parseInt(e.target.value)
-        const idx = parseInt(e.target.value) + 2  // -2..1 -> 0..3
-        spOctaveVal.textContent = octaveLabels[idx]
-      })
-      spOctaveVal.textContent = octaveLabels[parseInt(spOctave.value) + 2]
-
-      const spFilter = document.getElementById('sp-filter')
-      const spFilterVal = document.getElementById('sp-filter-val')
-      spFilter.addEventListener('input', (e) => {
-        soundParams.filterHz = parseFloat(e.target.value)
-        spFilterVal.textContent = labelFromPct(pct(parseFloat(e.target.value), 800, 8000), filterLabels)
-      })
-      spFilterVal.textContent = labelFromPct(pct(parseFloat(spFilter.value), 800, 8000), filterLabels)
-
-      const spDecay = document.getElementById('sp-decay')
-      const spDecayVal = document.getElementById('sp-decay-val')
-      spDecay.addEventListener('input', (e) => {
-        soundParams.decayMult = parseFloat(e.target.value)
-        spDecayVal.textContent = parseFloat(e.target.value).toFixed(1) + 's'
-      })
-      spDecayVal.textContent = parseFloat(spDecay.value).toFixed(1) + 's'
-
-      const spVol = document.getElementById('sp-vol')
-      const spVolVal = document.getElementById('sp-vol-val')
-      const volLabels = ['soft', 'mid', 'loud']
-      spVol.addEventListener('input', (e) => {
-        soundParams.volume = parseFloat(e.target.value)
-        spVolVal.textContent = labelFromPct(pct(parseFloat(e.target.value), 0.02, 0.30), volLabels)
-      })
-      spVolVal.textContent = labelFromPct(pct(parseFloat(spVol.value), 0.02, 0.30), volLabels)
 
       // ── Mute toggle ──
       const muteBtn = document.getElementById('mute-btn')
