@@ -264,11 +264,16 @@
       // ── Audio system ──
       let audioCtx = null
       let muted = false
+      // C major pentatonic — C D E G A across two octaves
       const chimePresets = [
-        { freq: 520, decay: 1.2 },  // soft bell
-        { freq: 360, decay: 0.8 },  // low chime
-        { freq: 620, decay: 1.0 },  // bright ring
-        { freq: 440, decay: 1.4, detune: 8 }, // airy chime
+        { freq: 261.63, decay: 1.4 }, // C4
+        { freq: 293.66, decay: 1.2 }, // D4
+        { freq: 329.63, decay: 1.1 }, // E4
+        { freq: 392.00, decay: 1.0 }, // G4
+        { freq: 440.00, decay: 0.9 }, // A4
+        { freq: 523.25, decay: 1.3 }, // C5
+        { freq: 587.33, decay: 1.1 }, // D5
+        { freq: 659.25, decay: 1.0 }, // E5
       ]
 
       function ensureAudio() {
