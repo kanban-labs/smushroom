@@ -112,6 +112,8 @@
         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
         <path class="sound-on" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
         <path class="sound-on" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+        <line class="sound-off" x1="18" y1="9" x2="22" y2="15" style="display:none" />
+        <line class="sound-off" x1="22" y1="9" x2="18" y2="15" style="display:none" />
       </svg>
     </button>
     <button id="fs-btn" aria-label="Toggle fullscreen">
@@ -183,16 +185,21 @@
           this.maxAlpha = 0.55 + Math.random() * 0.3
           this.fadeSpeed = 0.004 + Math.random() * 0.004
           this.dead = false
+
+          // pre-allocated geometry arrays for draw()
+          this._angles = new Float64Array(this.pts)
+          this._radii = new Float64Array(this.pts)
+          this._px = new Float64Array(this.pts)
+          this._py = new Float64Array(this.pts)
         }
 
         update() {
           // wiggle shape
           this.phase += this.phaseSpeed
-          this.offsets = this.offsets.map((o, i) => {
-            let n = o + this.offsetSpeeds[i]
-            if (n > 1.3 || n < 0.5) this.offsetSpeeds[i] *= -1
-            return n
-          })
+          for (let i = 0; i < this.pts; i++) {
+            this.offsets[i] += this.offsetSpeeds[i]
+            if (this.offsets[i] > 1.3 || this.offsets[i] < 0.5) this.offsetSpeeds[i] *= -1
+          }
 
           // drift
           this.x += this.vx
@@ -225,14 +232,13 @@
         draw() {
           const pts = this.pts
           const step = (Math.PI * 2) / pts
-          const angles = []
-          const radii = []
+          const { _angles: angles, _radii: radii, _px: px, _py: py } = this
           for (let i = 0; i < pts; i++) {
-            angles.push(step * i + this.phase)
-            radii.push(this.r * this.offsets[i])
+            angles[i] = step * i + this.phase
+            radii[i] = this.r * this.offsets[i]
+            px[i] = this.x + Math.cos(angles[i]) * radii[i]
+            py[i] = this.y + Math.sin(angles[i]) * radii[i]
           }
-          const px = angles.map((a, i) => this.x + Math.cos(a) * radii[i])
-          const py = angles.map((a, i) => this.y + Math.sin(a) * radii[i])
 
           bCtx.save()
           bCtx.globalAlpha = Math.max(0, this.alpha)
@@ -259,10 +265,10 @@
       let audioCtx = null
       let muted = false
       const chimePresets = [
-        { type: 'sine', freq: 520, decay: 0.4 }, // soft bell
-        { type: 'sine', freq: 280, decay: 0.2 }, // low plop
-        { type: 'triangle', freq: 680, decay: 0.3 }, // bright ding
-        { type: 'sine', freq: 440, decay: 0.5, detune: 12 }, // airy chime
+        { freq: 520, decay: 1.2 },  // soft bell
+        { freq: 360, decay: 0.8 },  // low chime
+        { freq: 620, decay: 1.0 },  // bright ring
+        { freq: 440, decay: 1.4, detune: 8 }, // airy chime
       ]
 
       function ensureAudio() {
@@ -273,48 +279,50 @@
       function playChime() {
         if (muted) return
         ensureAudio()
+        const t = audioCtx.currentTime
         const preset = chimePresets[Math.floor(Math.random() * chimePresets.length)]
+        const freq = preset.freq + (Math.random() - 0.5) * 40
+
+        // fundamental tone
         const osc = audioCtx.createOscillator()
-        const gain = audioCtx.createGain()
-        osc.type = preset.type
-        osc.frequency.value = preset.freq + (Math.random() - 0.5) * 60
+        osc.type = 'sine'
+        osc.frequency.value = freq
         if (preset.detune) osc.detune.value = preset.detune
-        gain.gain.setValueAtTime(0.18, audioCtx.currentTime)
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + preset.decay)
+
+        // soft harmonic overtone for shimmer
+        const osc2 = audioCtx.createOscillator()
+        osc2.type = 'sine'
+        osc2.frequency.value = freq * 2.98 // slightly detuned 3rd harmonic
+        const harmGain = audioCtx.createGain()
+        harmGain.gain.setValueAtTime(0.03, t)
+        harmGain.gain.exponentialRampToValueAtTime(0.001, t + preset.decay * 0.6)
+
+        // master envelope — gentle attack, long soft tail
+        const gain = audioCtx.createGain()
+        gain.gain.setValueAtTime(0.001, t)
+        gain.gain.linearRampToValueAtTime(0.09, t + 0.015) // soft attack
+        gain.gain.exponentialRampToValueAtTime(0.001, t + preset.decay)
+
         osc.connect(gain)
+        osc2.connect(harmGain)
+        harmGain.connect(gain)
         gain.connect(audioCtx.destination)
-        osc.start()
-        osc.stop(audioCtx.currentTime + preset.decay)
+        osc.start(t)
+        osc2.start(t)
+        osc.stop(t + preset.decay)
+        osc2.stop(t + preset.decay)
       }
 
       // ── Mute toggle ──
       const muteBtn = document.getElementById('mute-btn')
       const muteIcon = document.getElementById('mute-icon')
+      const soundOn = muteIcon.querySelectorAll('.sound-on')
+      const soundOff = muteIcon.querySelectorAll('.sound-off')
       muteBtn.addEventListener('click', (e) => {
         e.stopPropagation()
         muted = !muted
-        muteIcon.querySelectorAll('.sound-on').forEach((p) => (p.style.display = muted ? 'none' : ''))
-        if (muted) {
-          // add an X over the speaker when muted
-          if (!muteIcon.querySelector('.sound-off')) {
-            const l1 = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-            l1.setAttribute('class', 'sound-off')
-            l1.setAttribute('x1', '18')
-            l1.setAttribute('y1', '9')
-            l1.setAttribute('x2', '22')
-            l1.setAttribute('y2', '15')
-            const l2 = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-            l2.setAttribute('class', 'sound-off')
-            l2.setAttribute('x1', '22')
-            l2.setAttribute('y1', '9')
-            l2.setAttribute('x2', '18')
-            l2.setAttribute('y2', '15')
-            muteIcon.appendChild(l1)
-            muteIcon.appendChild(l2)
-          }
-        } else {
-          muteIcon.querySelectorAll('.sound-off').forEach((el) => el.remove())
-        }
+        soundOn.forEach((el) => (el.style.display = muted ? 'none' : ''))
+        soundOff.forEach((el) => (el.style.display = muted ? '' : 'none'))
       })
 
       let hintVisible = true
@@ -332,10 +340,15 @@
         }
 
         // fade out oldest blob if getting crowded
-        const live = blobs.filter((b) => !b.dead && !b.fadeIn)
-        if (live.length > 6) {
-          live[0].startFadeOut()
+        let liveCount = 0
+        let oldest = null
+        for (let i = 0; i < blobs.length; i++) {
+          if (!blobs[i].dead && !blobs[i].fadeIn) {
+            liveCount++
+            if (!oldest) oldest = blobs[i]
+          }
         }
+        if (liveCount > 6) oldest.startFadeOut()
 
         const b = new Blob()
         if (x !== undefined) {
@@ -388,7 +401,6 @@
       )
 
       function loop() {
-        ctx.clearRect(0, 0, W, H)
         ctx.fillStyle = '#0a0a12'
         ctx.fillRect(0, 0, W, H)
         bCtx.clearRect(0, 0, W, H)
@@ -396,7 +408,10 @@
         for (let i = blobs.length - 1; i >= 0; i--) {
           blobs[i].update()
           blobs[i].draw()
-          if (blobs[i].dead) blobs.splice(i, 1)
+          if (blobs[i].dead) {
+            blobs[i] = blobs[blobs.length - 1]
+            blobs.pop()
+          }
         }
 
         requestAnimationFrame(loop)
