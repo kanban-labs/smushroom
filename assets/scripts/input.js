@@ -75,8 +75,8 @@ function spawnTrailBlob(x, y) {
   b.r = Math.min(_state.W, _state.H) * (0.03 + Math.random() * 0.02)
   b.fadeIn = true
   b.alpha = 0
-  b.maxAlpha = 0.4 + Math.random() * 0.15
-  b.fadeSpeed = 0.008 + Math.random() * 0.004 // fade quicker than normal blobs
+  b.maxAlpha = 0.7 + Math.random() * 0.2
+  b.fadeSpeed = 0.006 + Math.random() * 0.003 // fade quicker than normal blobs
   b.vx = (Math.random() - 0.5) * 0.15 // slower drift
   b.vy = (Math.random() - 0.5) * 0.15
   blobs.push(b)
