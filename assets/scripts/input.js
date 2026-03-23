@@ -68,8 +68,9 @@ function mapXDistanceToOctave(dx) {
   return clamped / range // -1..+1
 }
 
-function spawnTrailBlob(x, y) {
+function spawnTrailBlob(x, y, c1, c2) {
   const b = new Blob()
+  if (c1 && c2) { b.c1 = c1; b.c2 = c2 }
   b.x = x
   b.y = y
   b.r = Math.min(_state.W, _state.H) * (0.03 + Math.random() * 0.02)
@@ -140,6 +141,8 @@ function startGesture(x, y, id, target) {
   dragState.lastTrailX = x
   dragState.lastTrailY = y
   dragState.blob = spawnTrailBlob(x, y)
+  dragState.trailC1 = dragState.blob.c1
+  dragState.trailC2 = dragState.blob.c2
 }
 
 function moveGesture(x, y) {
@@ -155,7 +158,7 @@ function moveGesture(x, y) {
     const tdx = x - dragState.lastTrailX
     const tdy = y - dragState.lastTrailY
     if (tdx * tdx + tdy * tdy >= TRAIL_SPACING * TRAIL_SPACING) {
-      spawnTrailBlob(x, y)
+      spawnTrailBlob(x, y, dragState.trailC1, dragState.trailC2)
       dragState.lastTrailX = x
       dragState.lastTrailY = y
     }
